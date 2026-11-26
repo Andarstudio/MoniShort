@@ -40,7 +40,6 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Unit tests
-        continue-on-error: true
         run: gradle testDebugUnitTest --stacktrace
 
       - name: Upload test report
