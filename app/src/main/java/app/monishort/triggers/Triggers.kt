@@ -38,7 +38,7 @@ object ChargerDisconnectedTrigger : Trigger {
 object BatteryLowTrigger : Trigger {
     override val type = TriggerTypes.BATTERY_LOW
     override val title = "Battery low"
-    override val description = "Runs when Android reports low battery (usually 15%). Needs the background monitor."
+    override val description = "Runs when Android broadcasts its system low-battery warning. Use Battery level reached for a custom percentage such as 20%."
 }
 
 object DeviceBootTrigger : Trigger {
@@ -47,11 +47,11 @@ object DeviceBootTrigger : Trigger {
     override val description = "Runs after the phone starts. Some manufacturers require Autostart to be enabled for MoniShort."
 }
 
-/** Fires when the battery level crosses the configured threshold (not on every change). */
+/** Fires when the battery crosses the configured threshold, or immediately on monitor start if already beyond it. */
 object BatteryLevelTrigger : Trigger {
     override val type = TriggerTypes.BATTERY_LEVEL
     override val title = "Battery level reached"
-    override val description = "Runs once when the battery crosses a level. Needs the background monitor."
+    override val description = "Runs when the battery reaches the configured percentage. If already beyond it when monitoring starts, runs once on startup."
     override val configFields = listOf(
         ParamSpec("level", "Level 1-100", kind = ParamKind.NUMBER),
         ParamSpec("direction", "Direction: below or above"),
@@ -71,7 +71,15 @@ object BatteryLevelTrigger : Trigger {
         val level = config["level"]?.trim()?.toIntOrNull() ?: return false
         val cur = event.values["level"]?.toIntOrNull() ?: return false
         val prev = event.values["previous"]?.toIntOrNull() ?: return false
-        return when (config["direction"]?.trim()?.lowercase()) {
+        val direction = config["direction"]?.trim()?.lowercase()
+        if (event.values["initial"] == "true") {
+            return when (direction) {
+                "below" -> cur <= level
+                "above" -> cur >= level
+                else -> false
+            }
+        }
+        return when (direction) {
             "below" -> prev > level && cur <= level
             "above" -> prev < level && cur >= level
             else -> false

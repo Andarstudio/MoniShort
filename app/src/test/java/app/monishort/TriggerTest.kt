@@ -11,8 +11,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TriggerTest {
-    private fun level(cur: Int, prev: Int) =
-        TriggerEvent(TriggerTypes.BATTERY_LEVEL, mapOf("level" to "$cur", "previous" to "$prev"))
+    private fun level(cur: Int, prev: Int, initial: Boolean = false) =
+        TriggerEvent(
+            TriggerTypes.BATTERY_LEVEL,
+            buildMap {
+                put("level", "$cur")
+                put("previous", "$prev")
+                if (initial) put("initial", "true")
+            },
+        )
 
     @Test fun belowFiresOnlyWhenCrossingDown() {
         val cfg = mapOf("level" to "20", "direction" to "below")
@@ -25,6 +32,18 @@ class TriggerTest {
         val cfg = mapOf("level" to "80", "direction" to "above")
         assertTrue(BatteryLevelTrigger.matches(level(80, 79), cfg))
         assertFalse(BatteryLevelTrigger.matches(level(81, 80), cfg))
+    }
+
+    @Test fun belowFiresOnInitialReadingWhenAlreadyBelowThreshold() {
+        val cfg = mapOf("level" to "20", "direction" to "below")
+        assertTrue(BatteryLevelTrigger.matches(level(18, 18, initial = true), cfg))
+        assertFalse(BatteryLevelTrigger.matches(level(25, 25, initial = true), cfg))
+    }
+
+    @Test fun aboveFiresOnInitialReadingWhenAlreadyAboveThreshold() {
+        val cfg = mapOf("level" to "80", "direction" to "above")
+        assertTrue(BatteryLevelTrigger.matches(level(85, 85, initial = true), cfg))
+        assertFalse(BatteryLevelTrigger.matches(level(75, 75, initial = true), cfg))
     }
 
     @Test fun configValidation() {

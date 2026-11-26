@@ -38,18 +38,25 @@ class AutomationService : Service() {
                     val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
                     if (level < 0 || scale <= 0) return
-                    val pct = level * 100 / scale
+                    val pct = (level * 100f / scale).toInt().coerceIn(0, 100)
                     val prev = lastLevel
-                    if (pct != prev) {
-                        lastLevel = pct
-                        if (prev >= 0) {
-                            dispatcher.dispatch(
-                                TriggerEvent(
-                                    TriggerTypes.BATTERY_LEVEL,
-                                    mapOf("level" to pct.toString(), "previous" to prev.toString()),
-                                )
+                    lastLevel = pct
+                    if (prev < 0) {
+                        // ACTION_BATTERY_CHANGED is sticky. If monitoring starts while the
+                        // battery is already beyond a configured threshold, evaluate it once.
+                        dispatcher.dispatch(
+                            TriggerEvent(
+                                TriggerTypes.BATTERY_LEVEL,
+                                mapOf("level" to pct.toString(), "previous" to pct.toString(), "initial" to "true"),
                             )
-                        }
+                        )
+                    } else if (pct != prev) {
+                        dispatcher.dispatch(
+                            TriggerEvent(
+                                TriggerTypes.BATTERY_LEVEL,
+                                mapOf("level" to pct.toString(), "previous" to prev.toString()),
+                            )
+                        )
                     }
                 }
             }
