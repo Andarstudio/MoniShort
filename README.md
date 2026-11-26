@@ -8,11 +8,11 @@ Kotlin · Jetpack Compose · Room · DataStore · Coroutines · min SDK 26 (Andr
 - **GitHub Actions** (included): `.github/workflows/build.yml` builds `app-debug.apk` and runs the unit tests on every push
   to `main`. Download it from the Actions run (artifact `MoniShort-debug-apk`) or from the `debug-latest` release.
 - **Android Studio**: open this folder (JDK 17), let Gradle sync, press Run.
-- **Command line**: `gradle assembleDebug` (Gradle 8.9) → `app/build/outputs/apk/debug/app-debug.apk`.
+- **Command line**: `gradle assembleDebug` (Gradle 8.9) -> `app/build/outputs/apk/debug/app-debug.apk`.
 
 Install: copy the APK to the phone, open it, allow "install unknown apps" for your file manager/browser when asked.
 
-## Status: batch 1 (foundation) — NOT yet compiled by the author
+## Status: batch 1 (foundation) - NOT yet compiled by the author
 
 This code was written without access to an Android SDK, so it has not been compiled yet. The first CI run may report
 compile errors; they are expected to be small and should be fixed from the build log.
