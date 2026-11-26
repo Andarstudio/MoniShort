@@ -1,8 +1,13 @@
 package app.monishort.core.ui
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,11 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.monishort.automation.ActionRegistry
+import app.monishort.automation.ParamKind
 import app.monishort.automation.ParamSpec
 import app.monishort.automation.Step
+import app.monishort.media.SoundFiles
 import java.util.UUID
 
 @Composable
@@ -72,13 +80,69 @@ fun DropdownField(label: String, options: List<String>, selected: Int, onSelect:
 @Composable
 fun ParamFields(specs: List<ParamSpec>, values: MutableMap<String, String>) {
     specs.forEach { p ->
-        OutlinedTextField(
-            value = values[p.key].orEmpty(),
-            onValueChange = { values[p.key] = it },
-            label = { Text(p.label + if (p.required) " *" else "") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        if (p.kind == ParamKind.URI && p.key == "uri") {
+            AudioFileParamField(p, values)
+        } else {
+            OutlinedTextField(
+                value = values[p.key].orEmpty(),
+                onValueChange = { values[p.key] = it },
+                label = { Text(p.label + if (p.required) " *" else "") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AudioFileParamField(spec: ParamSpec, values: MutableMap<String, String>) {
+    val context = LocalContext.current
+    val selectedUri = values[spec.key]?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+    var pickerError by remember { mutableStateOf<String?>(null) }
+
+    val audioPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+                values[spec.key] = uri.toString()
+                pickerError = null
+            } catch (e: SecurityException) {
+                pickerError = "MoniShort couldn't keep access to this file. Please choose it again."
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(
+            spec.label + if (spec.required) " *" else "",
+            style = MaterialTheme.typography.labelLarge,
         )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    selectedUri?.let { SoundFiles.displayName(context, it) } ?: "No MP3 selected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (selectedUri == null) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                )
+            }
+            OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/mpeg")) }) {
+                Text(if (selectedUri == null) "Choose MP3" else "Change MP3")
+            }
+        }
+        pickerError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
